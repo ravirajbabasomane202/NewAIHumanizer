@@ -1,0 +1,77 @@
+# Feature weights for AI likelihood scoring (v2 — 25 features)
+# Weights are used for the heuristic fallback; ML model learns its own.
+# These values approximate the learned GB feature importances.
+
+features:
+  # ── V1 Features ───────────────────────────────────────────────────────────
+  perplexity: 0.04
+  burstiness: 0.05
+  sentence_diversity: 0.03
+  lexical_diversity: 0.03
+  repetition: 0.03
+  semantic_predictability: 0.03
+  syntactic_complexity: 0.03
+  function_word_dist: 0.03
+  entropy: 0.03
+  ngram_frequency_bias: 0.03
+  over_coherence: 0.03
+  emotional_variability: 0.04
+  error_patterns: 0.04
+  contextual_depth: 0.08        # highest v1 importance
+  stopword_patterning: 0.03
+
+  # ── V2 Features (new) ──────────────────────────────────────────────────────
+  bigram_perplexity: 0.07       # bigram LM - stronger perplexity signal
+  log_likelihood_variance: 0.10  # GPTZero-style variance signal
+  vader_sentiment: 0.06          # VADER-style sentiment variance
+  compression_ratio: 0.04        # zlib complexity
+  stylometric_fingerprint: 0.04  # contractions, word length, punctuation
+  vocab_richness_curve: 0.04     # TTR saturation rate
+  punctuation_diversity: 0.03    # punctuation entropy
+  hapax_ratio: 0.03              # unique word ratio
+  readability_score: 0.03        # FK grade level
+  sentence_position_bias: 0.03   # structural positional patterns
+
+# Score → classification thresholds
+thresholds:
+  human_max: 30
+  mixed_max: 70
+  ai_min: 70
+
+# Highlight thresholds per feature (above = AI flag)
+highlight_thresholds:
+  perplexity: 0.60
+  burstiness: 0.55
+  sentence_diversity: 0.50
+  lexical_diversity: 0.50
+  repetition: 0.55
+  semantic_predictability: 0.55
+  syntactic_complexity: 0.55
+  function_word_dist: 0.55
+  entropy: 0.50
+  ngram_frequency_bias: 0.55
+  over_coherence: 0.60
+  emotional_variability: 0.55
+  error_patterns: 0.60
+  contextual_depth: 0.60
+  stopword_patterning: 0.55
+  bigram_perplexity: 0.60
+  log_likelihood_variance: 0.70
+  vader_sentiment: 0.60
+  compression_ratio: 0.55
+  stylometric_fingerprint: 0.60
+  vocab_richness_curve: 0.55
+  punctuation_diversity: 0.55
+  hapax_ratio: 0.55
+  readability_score: 0.55
+  sentence_position_bias: 0.55
+
+# Analysis settings
+settings:
+  moving_ttr_window: 50
+  repetition_ngram_size: 3
+  min_sentences: 2
+  max_input_chars: 100000
+  cache_enabled: true
+  debug: false
+  log_level: INFO

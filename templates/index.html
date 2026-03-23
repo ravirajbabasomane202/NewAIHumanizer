@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Text Analyzer + Humanizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06090f; --s1:#0a0f1e; --s2:#0e1628; --s3:#131f38;
+  --border:#1a2d4a; --border2:#243d63;
+  --blue:#3b82f6; --blue2:#60a5fa; --blue3:#93c5fd;
+  --red:#ef4444; --red2:#fca5a5;
+  --amber:#f59e0b; --amber2:#fcd34d;
+  --green:#22c55e; --green2:#86efac;
+  --purple:#a855f7; --purple2:#d8b4fe;
+  --text:#e2e8f0; --text2:#94a3b8; --text3:#4a6080;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'Plus Jakarta Sans',system-ui,sans-serif;
+  --r:10px;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 40% at 15% 8%,rgba(59,130,246,.07) 0%,transparent 60%),
+             radial-gradient(ellipse 55% 45% at 85% 85%,rgba(168,85,247,.06) 0%,transparent 60%);
+}
+
+/* Header */
+header{
+  display:flex;align-items:center;gap:.85rem;
+  padding:.85rem 1.5rem;border-bottom:1px solid var(--border);
+  background:rgba(6,9,15,.9);backdrop-filter:blur(16px);
+  position:sticky;top:0;z-index:100;
+}
+.logo{font-family:var(--mono);font-size:.92rem;font-weight:600;color:var(--blue2);display:flex;align-items:center;gap:.45rem}
+.logo-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);box-shadow:0 0 7px var(--blue)}
+.logo em{color:var(--purple2);font-style:normal}
+.hd-pill{font-family:var(--mono);font-size:.62rem;color:var(--text3);border:1px solid var(--border);border-radius:3px;padding:1px 7px;letter-spacing:.08em}
+.hd-spacer{flex:1}
+#hd-res{font-family:var(--mono);font-size:.72rem;padding:2px 9px;border-radius:3px;display:none;border:1px solid transparent}
+
+/* Wrap */
+.wrap{max-width:1260px;margin:0 auto;padding:1.5rem 1.5rem 5rem;position:relative;z-index:1}
+
+/* Hero */
+.hero{text-align:center;padding:2.5rem 0 2rem}
+.hero h1{font-size:clamp(1.75rem,3.8vw,2.7rem);font-weight:700;letter-spacing:-.03em;line-height:1.15;margin-bottom:.65rem}
+.hero h1 b{color:var(--blue2)}
+.hero h1 em{color:var(--purple2);font-style:normal}
+.hero p{color:var(--text2);font-size:.92rem;max-width:480px;margin:0 auto}
+
+/* Input card */
+.input-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem}
+.input-head{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1rem;border-bottom:1px solid var(--border);background:var(--s2)}
+.input-label{font-family:var(--mono);font-size:.67rem;color:var(--text3);text-transform:uppercase;letter-spacing:.1em}
+.char-ct{font-family:var(--mono);font-size:.67rem;color:var(--text3)}
+textarea{width:100%;background:transparent;border:none;color:var(--text);font-family:var(--sans);font-size:.95rem;line-height:1.75;padding:1rem;resize:vertical;min-height:155px;outline:none}
+textarea::placeholder{color:var(--text3)}
+.action-bar{display:flex;align-items:center;gap:.65rem;padding:.65rem 1rem;border-top:1px solid var(--border);background:var(--s2);flex-wrap:wrap}
+.demo-pills{display:flex;gap:.35rem;flex:1}
+.dp{font-family:var(--mono);font-size:.65rem;color:var(--text2);border:1px solid var(--border2);border-radius:3px;padding:3px 9px;cursor:pointer;background:transparent;transition:all .15s}
+.dp:hover{border-color:var(--blue);color:var(--blue2)}
+.btn-a{background:var(--blue);color:#fff;border:none;border-radius:6px;font-family:var(--mono);font-size:.78rem;font-weight:600;letter-spacing:.04em;padding:.5rem 1.4rem;cursor:pointer;transition:background .2s,transform .1s;white-space:nowrap}
+.btn-a:hover{background:var(--blue2)}
+.btn-a:active{transform:scale(.97)}
+.btn-a:disabled{background:var(--text3);cursor:not-allowed}
+
+/* Loading */
+.loading{display:none;text-align:center;padding:2.5rem}
+.loading.on{display:block}
+.spinner{width:34px;height:34px;border:3px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;margin:0 auto .65rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-msg{font-family:var(--mono);font-size:.72rem;color:var(--text3)}
+
+/* Error */
+.err{display:none;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.22);border-radius:var(--r);padding:.7rem 1rem;color:var(--red2);font-size:.86rem;margin-bottom:1rem}
+.err.on{display:block}
+
+/* Results */
+#results{display:none}
+#results.on{display:block;animation:rise .32s ease}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+
+/* Score band */
+.score-band{display:grid;grid-template-columns:auto 1fr auto;gap:1.25rem;align-items:center;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin-bottom:1.2rem}
+.score-num{font-family:var(--mono);font-size:3.4rem;font-weight:600;line-height:1;letter-spacing:-.04em}
+.score-sub{font-family:var(--mono);font-size:.6rem;color:var(--text3);letter-spacing:.1em;margin-top:.15rem}
+.cls-badge{display:inline-block;font-family:var(--mono);font-size:.75rem;font-weight:600;padding:.25rem .8rem;border-radius:4px;margin-top:.35rem}
+.badge-ai   {background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.22)}
+.badge-mixed{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.22)}
+.badge-human{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.22)}
+.meter-col{display:flex;flex-direction:column;gap:.35rem}
+.meter-track{height:7px;background:var(--border);border-radius:99px;overflow:hidden}
+.meter-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),var(--amber),var(--red));background-size:300% 100%;transition:width .85s cubic-bezier(.25,.46,.45,.94)}
+.meter-labs{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.58rem;color:var(--text3)}
+.meta-pills{display:flex;gap:.45rem;flex-wrap:wrap}
+.mp{background:var(--s3);border:1px solid var(--border);border-radius:5px;padding:.3rem .65rem;text-align:center}
+.mp .v{font-family:var(--mono);font-size:.88rem;color:var(--blue2);font-weight:600}
+.mp .k{font-family:var(--mono);font-size:.58rem;color:var(--text3);letter-spacing:.07em;margin-top:1px}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.2rem;overflow-x:auto}
+.tab{font-family:var(--mono);font-size:.68rem;color:var(--text3);padding:.5rem 1rem;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;letter-spacing:.05em;text-transform:uppercase}
+.tab:hover{color:var(--text2)}
+.tab.on{color:var(--blue2);border-bottom-color:var(--blue)}
+.tab-pane{display:none}
+.tab-pane.on{display:block;animation:rise .22s ease}
+
+/* Highlighted text */
+.hl-text{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem;font-size:.93rem;line-height:2;white-space:pre-wrap;word-break:break-word}
+.hl-ai   {background:rgba(239,68,68,.17);border-radius:3px;padding:0 2px;border-bottom:2px solid var(--red);cursor:help}
+.hl-mixed{background:rgba(245,158,11,.13);border-radius:3px;padding:0 2px;border-bottom:2px solid var(--amber)}
+.hl-human{background:rgba(34,197,94,.07);border-radius:3px;padding:0 2px}
+.hl-legend{display:flex;gap:1.25rem;margin-top:.65rem;font-size:.73rem;color:var(--text2)}
+.hl-legend span{display:flex;align-items:center;gap:.35rem}
+.hl-dot{width:8px;height:8px;border-radius:50%}
+
+/* Feature bars */
+.feat-grid{display:flex;flex-direction:column;gap:.42rem}
+.feat-row{display:grid;grid-template-columns:205px 1fr 50px;align-items:center;gap:.7rem}
+.feat-name{font-size:.78rem;color:var(--text2);text-align:right}
+.bar-track{background:var(--border);border-radius:99px;height:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;transition:width .48s ease}
+.bar-ai {background:var(--red)}
+.bar-mid{background:var(--amber)}
+.bar-ok {background:var(--blue)}
+.feat-pct{font-family:var(--mono);font-size:.7rem;color:var(--text3);text-align:right}
+
+/* Explanation */
+.expl-sum{color:var(--text2);line-height:1.8;font-size:.9rem;margin-bottom:.9rem}
+.findings{list-style:none;display:flex;flex-direction:column;gap:.38rem}
+.finding{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:.55rem .85rem;font-size:.81rem;color:var(--text2);line-height:1.5}
+.finding.warn{border-left:3px solid var(--red)}
+.finding.ok  {border-left:3px solid var(--green)}
+.conf-badge{display:inline-block;font-family:var(--mono);font-size:.65rem;padding:2px 8px;border-radius:3px;margin-bottom:.7rem}
+.conf-High  {background:rgba(34,197,94,.1);color:var(--green2)}
+.conf-Medium{background:rgba(245,158,11,.1);color:var(--amber2)}
+.conf-Low   {background:rgba(148,163,184,.08);color:var(--text2)}
+
+/* Raw */
+.raw-pre{font-family:var(--mono);font-size:.7rem;color:var(--text2);background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:1rem;overflow-x:auto;white-space:pre;line-height:1.6;max-height:380px;overflow-y:auto}
+
+/* Adversarial */
+.adv-empty{color:var(--text3);font-size:.83rem}
+.adv-run-btn{background:var(--s2);color:var(--text2);border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:.7rem;padding:.42rem .95rem;cursor:pointer;transition:all .15s;margin-bottom:.75rem}
+.adv-run-btn:hover{border-color:var(--blue);color:var(--blue2)}
+.adv-baseline{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:.55rem .9rem;margin-bottom:.7rem;display:flex;align-items:center;gap:1.25rem}
+.adv-grid{display:flex;flex-direction:column;gap:.3rem}
+.adv-row{display:grid;grid-template-columns:175px 65px 65px auto;align-items:center;gap:.65rem;padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.8rem}
+.adv-label{color:var(--text2)} .adv-score{font-family:var(--mono);color:var(--blue2)} .adv-delta{font-family:var(--mono)}
+.adv-badge{font-family:var(--mono);font-size:.62rem;padding:2px 6px;border-radius:3px}
+.adv-rob   {background:rgba(34,197,94,.1);color:var(--green2)}
+.adv-bypass{background:rgba(239,68,68,.1);color:var(--red2)}
+
+/* Export */
+.export-row{display:flex;gap:.45rem;margin-top:1.4rem;justify-content:flex-end}
+.btn-exp{background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:5px;font-family:var(--mono);font-size:.68rem;padding:.38rem .85rem;cursor:pointer;transition:all .15s}
+.btn-exp:hover{border-color:var(--blue2);color:var(--blue2)}
+
+/* =============================================
+   HUMANIZER SECTION
+============================================= */
+.hum-section{
+  margin-top:1.75rem;
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+.hum-header{
+  display:flex;align-items:center;gap:.75rem;
+  padding:.85rem 1.25rem;
+  background:linear-gradient(135deg,rgba(168,85,247,.07),rgba(59,130,246,.05));
+  border-bottom:1px solid var(--border);
+}
+.hum-icon{
+  width:30px;height:30px;border-radius:6px;
+  background:linear-gradient(135deg,rgba(168,85,247,.18),rgba(59,130,246,.12));
+  border:1px solid rgba(168,85,247,.28);
+  display:flex;align-items:center;justify-content:center;font-size:.95rem;
+  flex-shrink:0;
+}
+.hum-title{font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--purple2)}
+.hum-sub{font-size:.75rem;color:var(--text3);margin-top:1px}
+.hum-space{flex:1}
+.btn-hum{
+  background:linear-gradient(135deg,#7c3aed,#3b82f6);
+  color:#fff;border:none;border-radius:7px;
+  font-family:var(--mono);font-size:.76rem;font-weight:600;
+  letter-spacing:.04em;padding:.5rem 1.25rem;
+  cursor:pointer;transition:opacity .18s,transform .1s;white-space:nowrap;
+}
+.btn-hum:hover{opacity:.85}
+.btn-hum:active{transform:scale(.97)}
+.btn-hum:disabled{opacity:.35;cursor:not-allowed}
+
+.hum-body{padding:1.2rem}
+
+/* Humanizer loading */
+.hum-load{display:none;text-align:center;padding:1.75rem}
+.hum-load.on{display:block}
+.hum-spin{width:26px;height:26px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin .55s linear infinite;margin:0 auto .55rem}
+.hum-load-msg{font-family:var(--mono);font-size:.7rem;color:var(--text3)}
+
+/* Placeholder */
+.hum-placeholder{
+  text-align:center;padding:1.75rem;color:var(--text3);font-size:.83rem;
+  border:2px dashed var(--border);border-radius:8px;line-height:1.7;
+}
+.hum-placeholder strong{color:var(--purple2)}
+
+/* Score compare */
+.hum-compare{display:grid;grid-template-columns:1fr auto 1fr;gap:.9rem;align-items:center;margin-bottom:1.15rem}
+.hum-box{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.8rem .95rem;text-align:center}
+.hum-box .lbl{font-family:var(--mono);font-size:.6rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.28rem}
+.hum-box .num{font-family:var(--mono);font-size:2.1rem;font-weight:600;letter-spacing:-.04em;line-height:1}
+.hum-box .cls{font-size:.7rem;color:var(--text2);margin-top:.18rem;font-family:var(--mono)}
+.hum-arrow{display:flex;flex-direction:column;align-items:center;gap:.15rem}
+.arr-icon{font-size:1.35rem;color:var(--purple2);line-height:1}
+.arr-drop{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--green)}
+.arr-pct {font-family:var(--mono);font-size:.65rem;color:var(--green2)}
+
+/* Humanized text */
+.hum-text-lbl{font-family:var(--mono);font-size:.62rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.45rem;display:flex;align-items:center;justify-content:space-between}
+.btn-copy{background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:.63rem;padding:2px 9px;cursor:pointer;transition:all .15s}
+.btn-copy:hover{border-color:var(--blue);color:var(--blue2)}
+.hum-text{
+  background:var(--s2);border:1px solid var(--border2);border-radius:8px;
+  padding:.95rem;font-size:.92rem;line-height:1.8;color:var(--text);
+  white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;
+}
+.hum-text::-webkit-scrollbar{width:4px}
+.hum-text::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Transforms tags */
+.hum-transforms-wrap{margin-top:1.1rem}
+.hum-tags-lbl{font-family:var(--mono);font-size:.62rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem}
+.hum-tags{display:flex;flex-wrap:wrap;gap:.3rem}
+.hum-tag{font-family:var(--mono);font-size:.63rem;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.18);color:var(--purple2);border-radius:3px;padding:2px 7px}
+
+/* Feature changes */
+.hum-fc-wrap{margin-top:1.1rem}
+.hum-fc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.38rem;margin-top:.45rem}
+.hum-fc-item{background:var(--s2);border:1px solid var(--border);border-radius:5px;padding:.42rem .7rem;display:flex;align-items:center;justify-content:space-between;font-size:.76rem}
+.hum-fc-name{color:var(--text2)}
+.hum-fc-val{font-family:var(--mono);font-size:.68rem}
+.hum-fc-val.imp{color:var(--green)}
+.hum-fc-val.wrs{color:var(--red2)}
+.hum-fc-val.flt{color:var(--text3)}
+
+/* Tooltip */
+[data-tip]{position:relative}
+[data-tip]:hover::after{
+  content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--s3);border:1px solid var(--border2);border-radius:6px;padding:.38rem .6rem;
+  font-size:.7rem;color:var(--text);white-space:normal;width:190px;z-index:999;pointer-events:none;
+  box-shadow:0 4px 14px rgba(0,0,0,.45);
+}
+
+@media(max-width:640px){
+  .score-band{grid-template-columns:auto 1fr;grid-template-rows:auto auto}
+  .score-band .meta-pills{grid-column:1/-1}
+  .feat-row{grid-template-columns:1fr 1fr 38px}
+  .feat-name{text-align:left}
+  .hum-compare{grid-template-columns:1fr auto 1fr}
+}
+
+/* Until-Zero Panel */
+.uz-section{
+  margin-top:1rem;
+  background:linear-gradient(135deg,rgba(168,85,247,.05),rgba(34,197,94,.04));
+  border:1px solid rgba(168,85,247,.2);
+  border-radius:var(--r);overflow:hidden;
+}
+.uz-header{
+  display:flex;align-items:center;gap:.75rem;
+  padding:.75rem 1.1rem;
+  border-bottom:1px solid rgba(168,85,247,.15);
+}
+.uz-icon{font-size:1.1rem}
+.uz-title{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--purple2)}
+.uz-sub{font-size:.73rem;color:var(--text3);margin-top:1px}
+.uz-space{flex:1}
+.btn-uz{
+  background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(34,197,94,.15));
+  color:var(--purple2);
+  border:1px solid rgba(168,85,247,.35);
+  border-radius:7px;font-family:var(--mono);font-size:.75rem;font-weight:600;
+  letter-spacing:.04em;padding:.5rem 1.25rem;
+  cursor:pointer;transition:all .18s;white-space:nowrap;
+}
+.btn-uz:hover{background:linear-gradient(135deg,rgba(168,85,247,.4),rgba(34,197,94,.25));color:#fff}
+.btn-uz:active{transform:scale(.97)}
+.btn-uz:disabled{opacity:.35;cursor:not-allowed}
+.uz-body{padding:1.1rem}
+.uz-placeholder{text-align:center;padding:1.5rem;color:var(--text3);font-size:.82rem;border:2px dashed rgba(168,85,247,.2);border-radius:8px;line-height:1.7}
+.uz-placeholder strong{color:var(--purple2)}
+
+/* Round progress */
+.uz-progress{margin-bottom:1.1rem}
+.uz-prog-label{font-family:var(--mono);font-size:.62rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.45rem}
+.uz-rounds{display:flex;flex-direction:column;gap:.32rem}
+.uz-round{
+  display:grid;grid-template-columns:60px 1fr 85px;
+  align-items:center;gap:.7rem;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:6px;padding:.4rem .75rem;font-size:.78rem;
+}
+.uz-round-num{font-family:var(--mono);font-size:.65rem;color:var(--text3)}
+.uz-round-bar-wrap{position:relative;height:6px;background:var(--border);border-radius:99px;overflow:hidden}
+.uz-round-bar{height:100%;border-radius:99px;transition:width .5s ease}
+.uz-round-info{font-family:var(--mono);font-size:.7rem;text-align:right}
+.uz-round.improved .uz-round-bar{background:var(--green)}
+.uz-round.flat .uz-round-bar{background:var(--amber)}
+
+/* Final result */
+.uz-final{
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:8px;padding:1rem 1.1rem;margin-bottom:1rem;
+}
+.uz-score-row{display:flex;align-items:center;gap:1.25rem;margin-bottom:.75rem;flex-wrap:wrap}
+.uz-num-big{font-family:var(--mono);font-size:2.8rem;font-weight:600;letter-spacing:-.04em;line-height:1}
+.uz-drop-info{display:flex;flex-direction:column;gap:.2rem}
+.uz-drop-pts{font-family:var(--mono);font-size:.95rem;font-weight:600;color:var(--green)}
+.uz-drop-pct{font-family:var(--mono);font-size:.72rem;color:var(--green2)}
+.uz-rounds-used{font-family:var(--mono);font-size:.68rem;color:var(--text3);margin-left:auto}
+.uz-target-badge{
+  font-family:var(--mono);font-size:.7rem;
+  padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:.65rem;
+}
+.uz-target-yes{background:rgba(34,197,94,.12);color:var(--green2);border:1px solid rgba(34,197,94,.25)}
+.uz-target-no {background:rgba(245,158,11,.1);color:var(--amber2);border:1px solid rgba(245,158,11,.2)}
+.uz-text-lbl{font-family:var(--mono);font-size:.62rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;display:flex;align-items:center;justify-content:space-between}
+.uz-text{
+  background:var(--s3);border:1px solid var(--border);
+  border-radius:7px;padding:.9rem;font-size:.91rem;line-height:1.8;
+  white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto;
+  color:var(--text);
+}
+.uz-text::-webkit-scrollbar{width:4px}
+.uz-text::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Loading */
+.uz-load{display:none;text-align:center;padding:1.5rem}
+.uz-load.on{display:block}
+.uz-spin{width:26px;height:26px;border:2px solid var(--border2);border-top-color:var(--purple);border-radius:50%;animation:spin .55s linear infinite;margin:0 auto .5rem}
+.uz-spin-msg{font-family:var(--mono);font-size:.7rem;color:var(--text3)}
+
+/* Progress bar (overall) */
+.uz-overall-bar{
+  height:5px;background:var(--border);border-radius:99px;overflow:hidden;
+  margin-bottom:1.1rem;
+}
+.uz-overall-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--green),var(--purple2));
+  border-radius:99px;
+  transition:width .6s ease;
+}
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-dot"></div>AI<em>_</em>ANALYZER</div>
+  <div class="hd-pill">v3.0</div>
+  <div class="hd-pill" style="color:var(--purple2);border-color:rgba(168,85,247,.25)">+ Humanizer</div>
+  <div class="hd-spacer"></div>
+  <div id="hd-res" class="hd-pill"></div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <h1>Detect <b>AI Text</b> — then <em>Humanize</em> it</h1>
+    <p>Paste text below. Click <strong style="color:var(--blue2)">HUMANIZE</strong> — the app automatically analyzes, humanizes, and repeats until the AI score reaches zero.</p>
+  </div>
+
+  <!-- Input -->
+  <div class="input-card">
+    <div class="input-head">
+      <span class="input-label">Input Text</span>
+      <span class="char-ct" id="charCt">0 chars</span>
+    </div>
+    <textarea id="inputText"
+      placeholder="Paste AI-generated text here, then click HUMANIZE to automatically reduce the AI score to zero"
+      rows="7"
+      oninput="document.getElementById('charCt').textContent=this.value.length.toLocaleString()+' chars'"
+    ></textarea>
+    <div class="action-bar">
+      <div class="demo-pills">
+        <button class="dp" onclick="loadDemo('ai')">AI sample</button>
+        <button class="dp" onclick="loadDemo('human')">Human sample</button>
+      </div>
+      <button class="btn-a" id="analyzeBtn" onclick="runAnalysis()">HUMANIZE</button>
+    </div>
+  </div>
+
+  <div class="err" id="errBox"></div>
+
+  <div class="loading" id="loadingBox">
+    <div class="spinner"></div>
+    <div class="load-msg" id="loadMsg">Extracting features...</div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+
+    <!-- Score band -->
+    <div class="score-band">
+      <div>
+        <div class="score-num" id="scoreNum">—</div>
+        <div class="score-sub">AI-LIKELIHOOD</div>
+        <div id="clsBadge" class="cls-badge badge-mixed">—</div>
+      </div>
+      <div class="meter-col">
+        <div class="meter-track">
+          <div class="meter-fill" id="meterFill" style="width:0%"></div>
+        </div>
+        <div class="meter-labs">
+          <span>HUMAN (0)</span><span>MIXED (50)</span><span>AI (100)</span>
+        </div>
+      </div>
+      <div class="meta-pills" id="metaPills"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab on"  data-tab="highlights">Highlights</div>
+      <div class="tab"     data-tab="features">Features</div>
+      <div class="tab"     data-tab="importances">ML Weights</div>
+      <div class="tab"     data-tab="explanation">Explanation</div>
+      <div class="tab"     data-tab="adversarial">Adversarial</div>
+      <div class="tab"     data-tab="raw">Raw JSON</div>
+    </div>
+
+    <div class="tab-pane on" id="tab-highlights">
+      <div class="hl-text" id="hlText"></div>
+      <div class="hl-legend">
+        <span><div class="hl-dot" style="background:var(--red)"></div>AI-like</span>
+        <span><div class="hl-dot" style="background:var(--amber)"></div>Mixed</span>
+        <span><div class="hl-dot" style="background:var(--green)"></div>Human-like</span>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="tab-features">
+      <div class="feat-grid" id="featGrid"></div>
+    </div>
+
+    <div class="tab-pane" id="tab-importances">
+      <p style="font-size:.78rem;color:var(--text3);font-style:italic;margin-bottom:.75rem">
+        Importance weights learned by the Gradient Boosting classifier:
+      </p>
+      <div class="feat-grid" id="impGrid"></div>
+    </div>
+
+    <div class="tab-pane" id="tab-explanation">
+      <div id="explContent"></div>
+    </div>
+
+    <div class="tab-pane" id="tab-adversarial">
+      <button class="adv-run-btn" onclick="runAdversarial()">⚡ Run Adversarial Tests</button>
+      <div id="advContent"><p class="adv-empty">Click above to test robustness against common evasion attacks.</p></div>
+    </div>
+
+    <div class="tab-pane" id="tab-raw">
+      <pre class="raw-pre" id="rawPre"></pre>
+    </div>
+
+    <div class="export-row">
+      <button class="btn-exp" onclick="doExportHTML()">Export HTML</button>
+      <button class="btn-exp" onclick="doExportJSON()">Export JSON</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         HUMANIZER — automatic, no mode buttons
+    ═══════════════════════════════════════════ -->
+    <div class="hum-section" id="humSection" style="display:none">
+      <div class="hum-header">
+        <div class="hum-icon">✦</div>
+        <div>
+          <div class="hum-title">Humanizer Engine</div>
+          <div class="hum-sub">Maximum automatic transformation — breaks AI patterns</div>
+        </div>
+        <div class="hum-space"></div>
+        <button class="btn-hum" id="humBtn" onclick="runHumanizer()">HUMANIZE →</button>
+      </div>
+
+      <div class="hum-body">
+        <div class="hum-load" id="humLoad">
+          <div class="hum-spin"></div>
+          <div class="hum-load-msg" id="humMsg">Applying transformations...</div>
+        </div>
+
+        <div class="hum-placeholder" id="humPlaceholder">
+          Paste text above and click <strong>HUMANIZE</strong> to automatically reduce the AI detection score.
+        </div>
+
+        <div id="humResult" style="display:none">
+
+          <div class="hum-compare">
+            <div class="hum-box">
+              <div class="lbl">Before</div>
+              <div class="num" id="hBefore">—</div>
+              <div class="cls" id="hBeforeCls">—</div>
+            </div>
+            <div class="hum-arrow">
+              <div class="arr-icon">⟶</div>
+              <div class="arr-drop" id="hDrop">—</div>
+              <div class="arr-pct"  id="hPct">—</div>
+            </div>
+            <div class="hum-box">
+              <div class="lbl">After</div>
+              <div class="num" id="hAfter">—</div>
+              <div class="cls" id="hAfterCls">—</div>
+            </div>
+          </div>
+
+          <div class="hum-text-lbl">
+            <span>Humanized Text</span>
+            <button class="btn-copy" onclick="copyHumanized()">Copy</button>
+          </div>
+          <div class="hum-text" id="humText"></div>
+
+          <div class="hum-transforms-wrap">
+            <div class="hum-tags-lbl">Transformations Applied</div>
+            <div class="hum-tags" id="humTags"></div>
+          </div>
+
+          <div class="hum-fc-wrap">
+            <div class="hum-tags-lbl">Feature Changes (Before → After)</div>
+            <div class="hum-fc-grid" id="humFcGrid"></div>
+          </div>
+
+        </div><!-- /humResult -->
+      </div><!-- /hum-body -->
+    </div><!-- /hum-section -->
+
+    <!-- ═══════════════════════════════════════════
+         UNTIL ZERO — repeat until score reaches 0
+    ═══════════════════════════════════════════ -->
+    <div class="uz-section" id="uzSection" style="margin-top:1rem">
+      <div class="uz-header">
+        <div class="uz-icon">♻</div>
+        <div>
+          <div class="uz-title">Repeat Until Zero</div>
+          <div class="uz-sub">Keeps humanizing the current text until AI score reaches minimum</div>
+        </div>
+        <div class="uz-space"></div>
+        <button class="btn-uz" id="uzBtn" onclick="runUntilZero()" style="display:none">KEEP GOING →</button>
+      </div>
+
+      <div class="uz-body">
+        <div class="uz-load" id="uzLoad">
+          <div class="uz-spin"></div>
+          <div class="uz-spin-msg" id="uzMsg">Running round 1...</div>
+          <div class="uz-overall-bar" style="margin-top:.75rem;max-width:280px;margin-left:auto;margin-right:auto">
+            <div class="uz-overall-fill" id="uzOverallBar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div class="uz-placeholder" id="uzPlaceholder">
+          <strong>Processing...</strong><br>
+          Automatically humanizing your text to reduce AI score to zero.
+        </div>
+
+        <div id="uzResult" style="display:none">
+
+          <!-- Final score -->
+          <div class="uz-final">
+            <div id="uzTargetBadge"></div>
+            <div class="uz-score-row">
+              <div class="uz-num-big" id="uzFinalNum">—</div>
+              <div class="uz-drop-info">
+                <div class="uz-drop-pts" id="uzDropPts">—</div>
+                <div class="uz-drop-pct" id="uzDropPct">—</div>
+              </div>
+              <div class="uz-rounds-used" id="uzRoundsUsed">—</div>
+            </div>
+
+            <div class="uz-text-lbl">
+              <span>Best Humanized Text</span>
+              <button class="btn-copy" onclick="copyUntilZero()">Copy</button>
+            </div>
+            <div class="uz-text" id="uzText"></div>
+          </div>
+
+          <!-- Round-by-round progress — hidden -->
+          <div class="uz-progress" style="display:none">
+            <div class="uz-prog-label">Round-by-Round Progress</div>
+            <div class="uz-rounds" id="uzRounds"></div>
+          </div>
+
+        </div><!-- /uzResult -->
+      </div>
+    </div>
+
+  </div><!-- /results -->
+</div><!-- /wrap -->
+
+<script>
+// ── Demo texts ─────────────────────────────────────────
+const DEMOS = {
+  ai: `Artificial intelligence represents a transformative force in contemporary society. Furthermore, the implications of this technology extend across multiple domains. Consequently, policymakers must address these challenges systematically. Moreover, researchers have demonstrated significant progress in developing robust solutions. Additionally, stakeholders from various sectors have begun to implement these comprehensive frameworks. Ultimately, the seamless integration of AI systems requires careful consideration of ethical principles. The data-driven approach has proven particularly effective in identifying patterns. Organizations can leverage these capabilities to optimize their operational efficiency and facilitate better decision-making processes.`,
+  human: `I've been thinking about this for a while now — it's honestly kind of weird how we just accept things without questioning them. Like yesterday I was trying to fix my coffee maker, which has been broken for three weeks, and I kept wondering why I hadn't done it sooner. She always said the dough knew when you were in a hurry. I keep meaning to call her, but there's this awkward thing that always happens. So instead I buy bread. Which is fine! Mostly fine. The sourdough from that place on Clement Street is honestly better than anything I could make anyway.`
+};
+
+let lastResult = null, lastText = '', lastHumText = '';
+
+// Loading helpers
+let loadTimer;
+function startLoad(boxId, msgId, msgs) {
+  let i = 0;
+  document.getElementById(boxId).classList.add('on');
+  loadTimer = setInterval(() => {
+    document.getElementById(msgId).textContent = msgs[i++ % msgs.length];
+  }, 480);
+}
+function stopLoad(boxId) {
+  clearInterval(loadTimer);
+  document.getElementById(boxId).classList.remove('on');
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('on'));
+  t.classList.add('on');
+  const p = document.getElementById('tab-' + t.dataset.tab);
+  if (p) p.classList.add('on');
+}));
+
+function loadDemo(k) {
+  const ta = document.getElementById('inputText');
+  ta.value = DEMOS[k];
+  document.getElementById('charCt').textContent = ta.value.length.toLocaleString() + ' chars';
+}
+
+function showErr(m) { const e = document.getElementById('errBox'); e.textContent = '⚠ ' + m; e.classList.add('on') }
+function hideErr()  { document.getElementById('errBox').classList.remove('on') }
+function esc(s)     { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function escA(s)    { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
+
+function clsCls(c) {
+  if (!c) return 'badge-mixed';
+  if (c.includes('AI'))    return 'badge-ai';
+  if (c.includes('Human')) return 'badge-human';
+  return 'badge-mixed';
+}
+function scoreClr(c) {
+  if (!c) return 'var(--amber)';
+  if (c.includes('AI'))    return 'var(--red)';
+  if (c.includes('Human')) return 'var(--green)';
+  return 'var(--amber)';
+}
+
+const FEAT_NAMES = {
+  burstiness:'Sentence Variation', sentence_uniformity:'Sent. Uniformity',
+  lexical_density:'Lexical Density', phrase_repetition:'Phrase Repetition',
+  coherence_smoothness:'Coherence', compression_signal:'Compression',
+  contraction_absence:'Contraction Absence', sentence_length_cv:'Length Consistency',
+  transition_density:'AI Transitions', punct_uniformity:'Punct Uniformity',
+  hapax_signal:'Vocab Uniqueness', sentiment_flatness:'Sentiment Flatness',
+};
+
+const ANALYZE_MSGS = ['Tokenizing sentences...','Computing burstiness...','Detecting transitions...','Scoring features...','Running ML classifier...','Mapping highlights...','Building explanation...'];
+const HUMANIZE_MSGS = ['Replacing AI transitions...','Injecting contractions...','Varying sentence lengths...','Adding personal voice...','Diversifying vocabulary...','Applying punctuation variety...','Running feedback loop...','Re-analyzing transformed text...'];
+
+// ── ANALYZE ────────────────────────────────────────────
+async function runAnalysis() {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) { showErr('Please enter some text.'); return }
+  if (text.length > 100000) { showErr('Text too long (max 100,000 chars).'); return }
+  hideErr();
+  document.getElementById('results').classList.remove('on');
+  document.getElementById('analyzeBtn').disabled = true;
+  // Reset humanizer state
+  document.getElementById('humResult').style.display = 'none';
+  document.getElementById('humPlaceholder').style.display = 'block';
+  document.getElementById('humBtn').disabled = false;
+  // Reset until-zero state
+  document.getElementById('uzResult').style.display = 'none';
+  document.getElementById('uzPlaceholder').style.display = 'block';
+  document.getElementById('uzBtn').disabled = false;
+  lastUzText = '';
+  startLoad('loadingBox', 'loadMsg', ANALYZE_MSGS);
+
+  try {
+    const res  = await fetch('/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
+    const data = await res.json();
+    stopLoad('loadingBox');
+    document.getElementById('analyzeBtn').disabled = false;
+    if (!res.ok || data.error) { showErr(data.error || 'Analysis failed.'); return }
+    lastResult = data; lastText = text;
+    renderResults(data, text);
+    // Auto-trigger humanizer after analysis
+    await autoRunHumanizer();
+  } catch(e) {
+    stopLoad('loadingBox');
+    document.getElementById('analyzeBtn').disabled = false;
+    showErr('Network error — is the server running?');
+  }
+}
+
+function renderResults(d, text) {
+  const score = d.final_score, cls = d.classification, conf = d.confidence||{}, meta = d.metadata||{};
+
+  document.getElementById('scoreNum').textContent  = Math.round(score);
+  document.getElementById('scoreNum').style.color  = scoreClr(cls);
+  const badge = document.getElementById('clsBadge');
+  badge.textContent = cls; badge.className = 'cls-badge ' + clsCls(cls);
+  document.getElementById('meterFill').style.width = score + '%';
+
+  document.getElementById('metaPills').innerHTML = [
+    ['ML', Math.round(d.ml_score||score)], ['Conf', conf.level||'—'],
+    ['Words', meta.word_count||'—'], ['Sents', meta.sentence_count||'—'],
+  ].map(([v,k]) => `<div class="mp"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
+
+  const hd = document.getElementById('hd-res');
+  hd.textContent = `${Math.round(score)}/100 — ${cls}`;
+  hd.style.display = ''; hd.style.color = scoreClr(cls); hd.style.borderColor = scoreClr(cls) + '55';
+
+  // Highlights
+  let html = '', last = 0;
+  for (const h of [...(d.highlights||[])].sort((a,b)=>a.start-b.start)) {
+    if (h.start > last) html += esc(text.slice(last, h.start));
+    const cls2 = h.label==='AI'?'hl-ai':h.label==='Mixed'?'hl-mixed':'hl-human';
+    const tip  = (h.reasons||[]).slice(0,2).join('; ');
+    html += `<span class="${cls2}"${tip?` data-tip="${escA(tip)}"`:''}>${esc(text.slice(h.start,h.end))}</span>`;
+    last = h.end;
+  }
+  if (last < text.length) html += esc(text.slice(last));
+  document.getElementById('hlText').innerHTML = html;
+
+  // Features
+  const scores = d.scores||{};
+  document.getElementById('featGrid').innerHTML = Object.entries(scores).sort((a,b)=>b[1]-a[1]).map(([n,v]) => {
+    const p = (v*100).toFixed(1), cls3 = v>=.6?'bar-ai':v>=.35?'bar-mid':'bar-ok';
+    return `<div class="feat-row"><div class="feat-name">${FEAT_NAMES[n]||n}</div><div class="bar-track"><div class="bar-fill ${cls3}" style="width:${p}%"></div></div><div class="feat-pct">${p}%</div></div>`;
+  }).join('');
+
+  // ML importances
+  const imps = d.feature_importances||{};
+  const maxI = imps && Object.keys(imps).length ? Math.max(...Object.values(imps)) : 1;
+  document.getElementById('impGrid').innerHTML = Object.entries(imps).sort((a,b)=>b[1]-a[1]).map(([n,v]) => {
+    const p = (v*100).toFixed(1), bw = maxI>0?(v/maxI*100).toFixed(0):0;
+    return `<div class="feat-row"><div class="feat-name" style="color:var(--blue3)">${FEAT_NAMES[n]||n}</div><div class="bar-track"><div class="bar-fill bar-ok" style="width:${bw}%"></div></div><div class="feat-pct">${p}%</div></div>`;
+  }).join('') || '<p style="color:var(--text3);font-size:.8rem">Not available.</p>';
+
+  // Explanation
+  const expl = d.explanation||{};
+  let eh = `<span class="conf-badge conf-${expl.confidence||'Medium'}">Confidence: ${expl.confidence||'?'}</span>`;
+  eh += `<p class="expl-sum">${esc(expl.summary||'')}</p>`;
+  if (expl.key_findings?.length) {
+    eh += '<ul class="findings">' + expl.key_findings.map(f => `<li class="finding ${f.startsWith('⚠')?'warn':'ok'}">${esc(f)}</li>`).join('') + '</ul>';
+  }
+  document.getElementById('explContent').innerHTML = eh;
+
+  // Raw
+  document.getElementById('rawPre').textContent = JSON.stringify(d, null, 2);
+
+  // Adversarial reset
+  document.getElementById('advContent').innerHTML = '<p class="adv-empty">Click above to test robustness.</p>';
+
+  // Show & scroll
+  document.getElementById('results').classList.add('on');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('on'));
+  document.querySelector('.tab[data-tab="highlights"]').classList.add('on');
+  document.getElementById('tab-highlights').classList.add('on');
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── ADVERSARIAL ────────────────────────────────────────
+async function runAdversarial() {
+  if (!lastText) return;
+  document.getElementById('advContent').innerHTML = '<div class="loading on" style="padding:1.5rem"><div class="spinner"></div><div class="load-msg">Running 5 attacks...</div></div>';
+  try {
+    const res  = await fetch('/adversarial', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:lastText}) });
+    const data = await res.json();
+    if (data.error) { document.getElementById('advContent').innerHTML = `<p style="color:var(--red2)">${data.error}</p>`; return }
+    const baseline = data.baseline_score;
+    const attacks  = ['typo_injection','synonym_replacement','sentence_shuffle','contraction_injection','length_variation'];
+    const labels   = {typo_injection:'Typo Injection',synonym_replacement:'Synonym Replace',sentence_shuffle:'Sent. Shuffle',contraction_injection:'Contraction Add',length_variation:'Length Vary'};
+    const robust   = attacks.filter(a => data[a]?.robust).length;
+    let h = `<div class="adv-baseline"><div><span style="font-family:var(--mono);font-size:.6rem;color:var(--text3)">BASELINE </span><span style="font-family:var(--mono);font-size:1.05rem;font-weight:600;color:var(--blue2)">${Math.round(baseline)}/100</span></div><div style="font-family:var(--mono);font-size:.7rem;color:${robust>=4?'var(--green)':robust>=3?'var(--amber)':'var(--red)'}">Robustness: ${data.robustness_score}</div></div>`;
+    h += '<div class="adv-grid">';
+    for (const a of attacks) {
+      const v = data[a];
+      if (!v||v.error) { h+=`<div class="adv-row"><span class="adv-label">${labels[a]}</span><span style="color:var(--text3)">error</span><span>—</span><span>—</span></div>`; continue }
+      const dc = Math.abs(v.delta)<10?'var(--green)':Math.abs(v.delta)<20?'var(--amber)':'var(--red)';
+      h += `<div class="adv-row"><span class="adv-label">${labels[a]}</span><span class="adv-score">${Math.round(v.score)}</span><span class="adv-delta" style="color:${dc}">${v.delta>0?'+':''}${v.delta.toFixed(1)}</span><span class="adv-badge ${v.robust?'adv-rob':'adv-bypass'}">${v.robust?'ROBUST':'BYPASS'}</span></div>`;
+    }
+    h += '</div>';
+    document.getElementById('advContent').innerHTML = h;
+  } catch(e) { document.getElementById('advContent').innerHTML = `<p style="color:var(--red2)">Error: ${e.message}</p>` }
+}
+
+// ── AUTO HUMANIZER (called automatically after analysis) ──
+async function autoRunHumanizer() {
+  if (!lastText) return;
+  document.getElementById('humBtn').disabled = true;
+  document.getElementById('humPlaceholder').style.display = 'none';
+  document.getElementById('humResult').style.display = 'none';
+
+  // Show uz section loading hint
+  document.getElementById('uzPlaceholder').style.display = 'none';
+  document.getElementById('uzLoad').classList.add('on');
+  document.getElementById('uzMsg').textContent = 'Starting humanization...';
+
+  try {
+    const res  = await fetch('/humanize', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:lastText}) });
+    const data = await res.json();
+    if (!res.ok || data.error) { showErr(data.error||'Humanization failed.'); stopLoad('uzLoad'); return; }
+    lastHumText = data.humanized_text || '';
+    // Don't render humanizer result (section hidden), go straight to until-zero
+    document.getElementById('uzBtn').disabled = false;
+    stopLoad('uzLoad');
+    await runUntilZero();
+  } catch(e) {
+    stopLoad('uzLoad');
+    showErr('Network error during humanization.');
+  }
+}
+
+// ── HUMANIZER ──────────────────────────────────────────
+async function runHumanizer() {
+  if (!lastText) { showErr('Run analysis first.'); return }
+  document.getElementById('humBtn').disabled = true;
+  document.getElementById('humPlaceholder').style.display = 'none';
+  document.getElementById('humResult').style.display = 'none';
+  startLoad('humLoad', 'humMsg', HUMANIZE_MSGS);
+
+  try {
+    const res  = await fetch('/humanize', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:lastText}) });
+    const data = await res.json();
+    stopLoad('humLoad');
+    document.getElementById('humBtn').disabled = false;
+    if (!res.ok || data.error) { document.getElementById('humPlaceholder').style.display='block'; showErr(data.error||'Humanization failed.'); return }
+    lastHumText = data.humanized_text || '';
+    renderHumanizer(data);
+    // Enable until-zero after humanizer runs
+    document.getElementById('uzPlaceholder').innerHTML =
+      'Click <strong>KEEP GOING →</strong> to continue reducing the score until it reaches near zero.';
+    document.getElementById('uzBtn').disabled = false;
+  } catch(e) {
+    stopLoad('humLoad');
+    document.getElementById('humBtn').disabled = false;
+    document.getElementById('humPlaceholder').style.display = 'block';
+    showErr('Network error during humanization.');
+  }
+}
+
+function renderHumanizer(d) {
+  const orig = d.original_score||0, fin = d.humanized_score||0;
+  const drop = d.score_change||0, pct = d.improvement_pct||0;
+  const oc = d.original_class||'—', fc = d.humanized_class||'—';
+
+  document.getElementById('hBefore').textContent = Math.round(orig);
+  document.getElementById('hBefore').style.color = scoreClr(oc);
+  document.getElementById('hBeforeCls').textContent = oc;
+  document.getElementById('hAfter').textContent  = Math.round(fin);
+  document.getElementById('hAfter').style.color  = scoreClr(fc);
+  document.getElementById('hAfterCls').textContent = fc;
+
+  const dropEl = document.getElementById('hDrop');
+  dropEl.textContent = drop > 0 ? `−${drop.toFixed(1)} pts` : `+${Math.abs(drop).toFixed(1)} pts`;
+  dropEl.style.color = drop > 5 ? 'var(--green)' : drop > 0 ? 'var(--amber)' : 'var(--red2)';
+  document.getElementById('hPct').textContent = pct > 0 ? `${pct.toFixed(0)}% reduction` : 'no change';
+
+  document.getElementById('humText').textContent = d.humanized_text || '';
+
+  // Transforms
+  document.getElementById('humTags').innerHTML = (d.transformations_applied||[]).map(t => `<span class="hum-tag">${esc(t)}</span>`).join('');
+
+  // Feature changes
+  const fc2 = d.per_feature_changes||{};
+  const items = Object.entries(fc2).filter(([,v])=>Math.abs(v.delta)>=.02).sort((a,b)=>a[1].delta-b[1].delta);
+  document.getElementById('humFcGrid').innerHTML = items.map(([k,v]) => {
+    const cls = v.delta<-.02?'imp':v.delta>.02?'wrs':'flt';
+    const sign = v.delta>0?'+':'';
+    return `<div class="hum-fc-item"><span class="hum-fc-name">${FEAT_NAMES[k]||k}</span><span class="hum-fc-val ${cls}">${v.before.toFixed(2)}→${v.after.toFixed(2)} (${sign}${v.delta.toFixed(2)})</span></div>`;
+  }).join('');
+
+  document.getElementById('humResult').style.display = 'block';
+  document.getElementById('humSection').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function copyHumanized() {
+  if (!lastHumText) return;
+  navigator.clipboard.writeText(lastHumText).then(() => {
+    const b = document.querySelector('.btn-copy');
+    const o = b.textContent; b.textContent = '✓ Copied'; b.style.color = 'var(--green)';
+    setTimeout(() => { b.textContent = o; b.style.color = '' }, 2000);
+  });
+}
+
+// ── Export ──────────────────────────────────────────────
+async function doExportHTML() {
+  if (!lastText) return;
+  const res  = await fetch('/export/html', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:lastText}) });
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a'); a.href=url; a.download='ai_analysis.html'; a.click();
+  URL.revokeObjectURL(url);
+}
+function doExportJSON() {
+  if (!lastResult) return;
+  const blob = new Blob([JSON.stringify(lastResult,null,2)],{type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a'); a.href=url; a.download='ai_analysis.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.addEventListener('keydown', e => { if ((e.ctrlKey||e.metaKey) && e.key==='Enter') runAnalysis() });
+
+// ── UNTIL ZERO ─────────────────────────────────────────
+let lastUzText = '';
+const UZ_MSGS = [
+  'Round {n} — replacing transitions...', 'Round {n} — injecting contractions...',
+  'Round {n} — varying sentence lengths...', 'Round {n} — adding personal voice...',
+  'Round {n} — diversifying vocabulary...', 'Round {n} — running feedback loop...',
+  'Round {n} — re-analyzing result...', 'Round {n} — trying next seed...',
+];
+
+async function runUntilZero() {
+  // Use current humanized text if available, else original
+  const textToUse = lastHumText || lastText;
+  if (!textToUse) { showErr('Run Analyze first.'); return; }
+
+  document.getElementById('uzBtn').disabled = true;
+  document.getElementById('uzPlaceholder').style.display = 'none';
+  document.getElementById('uzResult').style.display = 'none';
+
+  // Animated loading with round counter
+  let round = 0;
+  startLoad('uzLoad', 'uzMsg', ['Initializing...']);
+  const uzTimer = setInterval(() => {
+    round = (round + 1) % 8;
+    const msg = UZ_MSGS[round].replace('{n}', '...');
+    document.getElementById('uzMsg').textContent = msg;
+  }, 600);
+
+  // Animate the overall progress bar
+  let barPct = 0;
+  const barTimer = setInterval(() => {
+    barPct = Math.min(barPct + 1.5, 90);
+    document.getElementById('uzOverallBar').style.width = barPct + '%';
+  }, 300);
+
+  try {
+    const currentScore = lastResult ? lastResult.final_score : 100;
+    const res  = await fetch('/humanize/until-zero', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text:       textToUse,
+        target:     15,
+        max_rounds: 10,
+      }),
+    });
+    const data = await res.json();
+
+    clearInterval(uzTimer);
+    clearInterval(barTimer);
+    stopLoad('uzLoad');
+    document.getElementById('uzOverallBar').style.width = '100%';
+    document.getElementById('uzBtn').disabled = false;
+
+    if (!res.ok || data.error) { showErr(data.error || 'Until-zero failed.'); return; }
+
+    lastUzText = data.best_text || '';
+    renderUntilZero(data);
+
+  } catch(e) {
+    clearInterval(uzTimer);
+    clearInterval(barTimer);
+    stopLoad('uzLoad');
+    document.getElementById('uzBtn').disabled = false;
+    document.getElementById('uzPlaceholder').style.display = 'block';
+    showErr('Network error: ' + e.message);
+  }
+}
+
+function renderUntilZero(data) {
+  const orig  = data.original_score  || 0;
+  const best  = data.best_score      || 0;
+  const drop  = data.total_drop      || 0;
+  const pct   = data.improvement_pct || 0;
+  const rounds = data.rounds         || [];
+  const reached = data.target_reached;
+
+  // Target badge
+  document.getElementById('uzTargetBadge').innerHTML = reached
+    ? '<span class="uz-target-badge uz-target-yes">✓ Target Reached — Human-like</span>'
+    : `<span class="uz-target-badge uz-target-no">Best achievable: ${best.toFixed(0)}/100 after ${rounds.length} rounds</span>`;
+
+  // Final score
+  const numEl = document.getElementById('uzFinalNum');
+  numEl.textContent = Math.round(best);
+  numEl.style.color = best < 30 ? 'var(--green)' : best < 60 ? 'var(--amber)' : 'var(--red)';
+
+  document.getElementById('uzDropPts').textContent = `−${drop.toFixed(1)} pts total`;
+  document.getElementById('uzDropPct').textContent = `${pct.toFixed(0)}% reduction from ${Math.round(orig)}`;
+  document.getElementById('uzRoundsUsed').textContent = `${rounds.length} round${rounds.length !== 1 ? 's' : ''}`;
+
+  // Text
+  document.getElementById('uzText').textContent = data.best_text || '';
+
+  // Round history
+  document.getElementById('uzRounds').innerHTML = rounds.map(r => {
+    const improved = r.improved;
+    const barW     = Math.max(0, 100 - (r.score_after / 100 * 100));
+    const scoreClrR = r.score_after < 30 ? 'var(--green)' : r.score_after < 60 ? 'var(--amber)' : 'var(--red)';
+    return `<div class="uz-round ${improved ? 'improved' : 'flat'}">
+      <div class="uz-round-num">Round ${r.round}</div>
+      <div class="uz-round-bar-wrap">
+        <div class="uz-round-bar" style="width:${barW}%"></div>
+      </div>
+      <div class="uz-round-info">
+        <span style="color:var(--text3)">${r.score_before.toFixed(0)}</span>
+        <span style="color:var(--text3)"> → </span>
+        <span style="color:${scoreClrR};font-weight:600">${r.score_after.toFixed(0)}</span>
+        ${improved ? '<span style="color:var(--green);margin-left:.3rem">↓</span>' : '<span style="color:var(--text3);margin-left:.3rem">—</span>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('uzResult').style.display = 'block';
+  document.getElementById('uzSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function copyUntilZero() {
+  if (!lastUzText) return;
+  navigator.clipboard.writeText(lastUzText).then(() => {
+    const btns = document.querySelectorAll('.btn-copy');
+    btns.forEach(b => {
+      if (b.closest('#uzResult')) {
+        const o = b.textContent; b.textContent = '✓ Copied'; b.style.color = 'var(--green)';
+        setTimeout(() => { b.textContent = o; b.style.color = ''; }, 2000);
+      }
+    });
+  });
+}
+
+// Also reset uz when new analysis runs
+const _origRenderResults = renderResults;
+// (already handled by humSection reset above)
+
+</script>
+</body>
+</html>

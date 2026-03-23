@@ -1,0 +1,62 @@
+{
+  "builder_name": "csv",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "ai-human-text-detection-v1",
+  "dataset_size": 45207015,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/silentone0725/ai-human-text-detection-v1@a303611a074f8f6736302126e8f06c51273f4562/train.csv": {
+      "num_bytes": 31548702,
+      "checksum": null
+    },
+    "hf://datasets/silentone0725/ai-human-text-detection-v1@a303611a074f8f6736302126e8f06c51273f4562/validation.csv": {
+      "num_bytes": 6841371,
+      "checksum": null
+    },
+    "hf://datasets/silentone0725/ai-human-text-detection-v1@a303611a074f8f6736302126e8f06c51273f4562/test.csv": {
+      "num_bytes": 6645717,
+      "checksum": null
+    }
+  },
+  "download_size": 45035790,
+  "features": {
+    "text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "label": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 90242805,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 31668023,
+      "num_examples": 36744,
+      "dataset_name": "ai-human-text-detection-v1"
+    },
+    "validation": {
+      "name": "validation",
+      "num_bytes": 6866731,
+      "num_examples": 7874,
+      "dataset_name": "ai-human-text-detection-v1"
+    },
+    "test": {
+      "name": "test",
+      "num_bytes": 6672261,
+      "num_examples": 7874,
+      "dataset_name": "ai-human-text-detection-v1"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
